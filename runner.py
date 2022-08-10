@@ -184,6 +184,8 @@ if __name__ == "__main__":
                 print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                 writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                rw_keys = [k for k in info.keys() if 'ep_rw/' in  k]
+                [writer.add_scalar(rw_k, info[rw_k], global_step) for rw_k in rw_keys]
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
