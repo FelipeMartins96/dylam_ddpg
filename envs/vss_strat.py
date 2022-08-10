@@ -51,8 +51,11 @@ class VSSStratEnv(VSSBaseEnv):
         Episode Termination:
             30 seconds match time
     """
+    VSSBaseEnv.metadata['num_rewads'] = 4
+    VSSBaseEnv.metadata['r_min'] = np.array([0.0, 0.0, -2.0, 0.0])
+    VSSBaseEnv.metadata['r_max'] = np.array([0.5, 1.0, -1.0, 1.0])
 
-    def __init__(self, stratified=True, n_robots_blue=3, n_robots_yellow=3):
+    def __init__(self, n_robots_blue=3, n_robots_yellow=3):
         super().__init__(
             field_type=0, n_robots_blue=n_robots_blue, n_robots_yellow=n_robots_yellow, time_step=0.025
         )
@@ -77,15 +80,6 @@ class VSSStratEnv(VSSBaseEnv):
                 OrnsteinUhlenbeckAction(self.action_space, dt=self.time_step)
             )
         
-        self.ori_weights = np.array([0.6600, 0.3200, 0.0053, 0.0080])
-        self.stratified = stratified
-
-        self.r_min = np.array([0.0, 0.0, -2.0, 0.0])
-        self.r_max = np.array([0.5, 1.0, -1.0, 1.0])
-
-        if stratified:
-            self.num_rewards = 4
-
         print("dylam_ddpg/envs/vss_strat Environment initialized")
 
     def reset(self):
@@ -100,22 +94,17 @@ class VSSStratEnv(VSSBaseEnv):
     def step(self, action):
         observation, strat_reward, done, _ = super().step(action)
 
-        original_reward = (strat_reward * self.ori_weights).sum()
-        # original_reward = strat_reward.sum()
+        original_reward = strat_reward.sum()
 
-
-        if not self.stratified:
-            reward = original_reward
-        else:
-            reward = strat_reward
-
-        self.cumulative_reward_info['Original_reward'] += original_reward
-        
         info = self.cumulative_reward_info
+        info["step_rw/move"] = strat_reward[0]
+        info["step_rw/ball_grad"] = strat_reward[1]
+        info["step_rw/energy"] = strat_reward[2]
+        info["step_rw/goal"] = strat_reward[3]
         info['ep_rw/goal_blue'] = 1 if strat_reward[3] == 1 else 0
         info['ep_rw/goal_yellow'] = 1 if strat_reward[3] == -1 else 0
         
-        return observation, reward, done, info
+        return observation, original_reward, done, info
 
     def _frame_to_observations(self):
 
