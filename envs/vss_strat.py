@@ -86,7 +86,7 @@ class VSSStratEnv(VSSBaseEnv):
         if stratified:
             self.num_rewards = 4
 
-        print("agents/envs/vss_strat Environment initialized")
+        print("dylam_ddpg/envs/vss_strat Environment initialized")
 
     def reset(self):
         self.actions = None
