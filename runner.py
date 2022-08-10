@@ -52,7 +52,7 @@ def parse_args():
         help="the batch size of sample from the reply memory")
     parser.add_argument("--exploration-noise", type=float, default=0.1,
         help="the scale of exploration noise")
-    parser.add_argument("--learning-starts", type=int, default=25e3,
+    parser.add_argument("--learning-starts", type=int, default=1e5,
         help="timestep to start learning")
     parser.add_argument("--policy-frequency", type=int, default=2,
         help="the frequency of training policy (delayed)")
