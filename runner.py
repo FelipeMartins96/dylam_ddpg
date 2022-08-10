@@ -58,6 +58,9 @@ def parse_args():
         help="the frequency of training policy (delayed)")
     parser.add_argument("--noise-clip", type=float, default=0.5,
         help="noise clip parameter of the Target Policy Smoothing Regularization")
+    
+    parser.add_argument("--num-envs", type=int, default=8,
+        help="number of environments on vector env")
     args = parser.parse_args()
     # fmt: on
     return args
@@ -101,8 +104,8 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(256, 256)
         self.fc_mu = nn.Linear(256, np.prod(env.single_action_space.shape))
         # action rescaling
-        self.register_buffer("action_scale", torch.FloatTensor((env.action_space.high - env.action_space.low) / 2.0))
-        self.register_buffer("action_bias", torch.FloatTensor((env.action_space.high + env.action_space.low) / 2.0))
+        self.register_buffer("action_scale", torch.FloatTensor((env.single_action_space.high - env.single_action_space.low) / 2.0))
+        self.register_buffer("action_bias", torch.FloatTensor((env.single_action_space.high + env.single_action_space.low) / 2.0))
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -141,7 +144,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    envs = gym.vector.AsyncVectorEnv([make_env(args.env_id, args.seed, 0, args.capture_video, run_name)])
+    envs = gym.vector.AsyncVectorEnv([make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)])
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     actor = Actor(envs).to(device)
@@ -165,14 +168,16 @@ if __name__ == "__main__":
 
     # TRY NOT TO MODIFY: start the game
     obs = envs.reset()
-    for global_step in range(args.total_timesteps):
+    for envs_step in range(0, args.total_timesteps, envs.num_envs):
+        global_step = envs_step / envs.num_envs
+
         # ALGO LOGIC: put action logic here
-        if global_step < args.learning_starts:
+        if envs_step < args.learning_starts:
             actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
         else:
             with torch.no_grad():
                 actions = actor(torch.Tensor(obs).to(device))
-                actions += torch.normal(actor.action_bias, actor.action_scale * args.exploration_noise)
+                actions += torch.normal(actor.action_bias.expand(envs.num_envs,-1), actor.action_scale * args.exploration_noise)
                 actions = actions.cpu().numpy().clip(envs.single_action_space.low, envs.single_action_space.high)
 
         # TRY NOT TO MODIFY: execute the game and log data.
@@ -181,11 +186,11 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         for info in infos:
             if "episode" in info.keys():
-                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                print(f"envs_step={envs_step}, episodic_return={info['episode']['r']}")
+                writer.add_scalar("charts/episodic_return", info["episode"]["r"], envs_step)
+                writer.add_scalar("charts/episodic_length", info["episode"]["l"], envs_step)
                 rw_keys = [k for k in info.keys() if 'ep_rw/' in  k]
-                [writer.add_scalar(rw_k, info[rw_k], global_step) for rw_k in rw_keys]
+                [writer.add_scalar(rw_k, info[rw_k], envs_step) for rw_k in rw_keys]
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
@@ -193,13 +198,13 @@ if __name__ == "__main__":
         for idx, d in enumerate(dones):
             if d:
                 real_next_obs[idx] = infos[idx]["terminal_observation"]
-        rb.add(obs, real_next_obs, actions, rewards, dones, infos)
+        [rb.add(obs[i:i+1], real_next_obs[i:i+1], actions[i:i+1], rewards[i:i+1], dones[i:i+1], infos[i:i+1]) for i in range(envs.num_envs)]
 
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
         obs = next_obs
 
         # ALGO LOGIC: training.
-        if global_step > args.learning_starts:
+        if envs_step > args.learning_starts:
             data = rb.sample(args.batch_size)
             with torch.no_grad():
                 next_state_actions = target_actor(data.next_observations)
@@ -227,11 +232,11 @@ if __name__ == "__main__":
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
 
             if global_step % 100 == 0:
-                writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
-                writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
-                writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
-                print("SPS:", int(global_step / (time.time() - start_time)))
-                writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+                writer.add_scalar("losses/qf1_loss", qf1_loss.item(), envs_step)
+                writer.add_scalar("losses/actor_loss", actor_loss.item(), envs_step)
+                writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), envs_step)
+                print("SPS:", int(envs_step / (time.time() - start_time)))
+                writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
 
     envs.close()
     writer.close()
