@@ -47,11 +47,11 @@ def parse_args():
         help="the discount factor gamma")
     parser.add_argument("--tau", type=float, default=0.005,
         help="target smoothing coefficient (default: 0.005)")
-    parser.add_argument("--batch-size", type=int, default=2,
+    parser.add_argument("--batch-size", type=int, default=128,
         help="the batch size of sample from the reply memory")
     parser.add_argument("--exploration-noise", type=float, default=0.2,
         help="the scale of exploration noise")
-    parser.add_argument("--learning-starts", type=int, default=1e4,
+    parser.add_argument("--learning-starts", type=int, default=1e5,
         help="timestep to start learning")
     parser.add_argument("--policy-frequency", type=int, default=2,
         help="the frequency of training policy (delayed)")
