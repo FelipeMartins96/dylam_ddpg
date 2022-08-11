@@ -52,8 +52,8 @@ class VSSStratEnv(VSSBaseEnv):
             30 seconds match time
     """
     VSSBaseEnv.metadata['num_rewads'] = 4
-    VSSBaseEnv.metadata['r_min'] = np.array([0.0, 0.0, -2.0, 0.0])
-    VSSBaseEnv.metadata['r_max'] = np.array([0.5, 1.0, -1.0, 1.0])
+    VSSBaseEnv.metadata['r_min'] = np.array([0.0*0.66, 0.0*0.32, -2.0*0.0053, 0.0*0.008])
+    VSSBaseEnv.metadata['r_max'] = np.array([0.5*0.66, 1.0*0.32, -1.0*0.0053, 1.0*0.008])
 
     def __init__(self, n_robots_blue=3, n_robots_yellow=3):
         super().__init__(
@@ -70,9 +70,10 @@ class VSSStratEnv(VSSBaseEnv):
         self.actions: Dict = None
         self.cumulative_reward_info = None
         self.v_wheel_deadzone = 0.05
-        self.energy_scale = 40000
-        self.grad_scale = 0.75
-        self.move_scale = 120
+        self.move_scale = 120 / 0.66
+        self.grad_scale = 0.75 / 0.32
+        self.energy_scale = 40000 / 0.0053
+        self.goal_scale = 1 / 0.008
 
         self.ou_actions = []
         for i in range(self.n_robots_blue + self.n_robots_yellow):
@@ -101,8 +102,8 @@ class VSSStratEnv(VSSBaseEnv):
         info["step_rw/ball_grad"] = strat_reward[1]
         info["step_rw/energy"] = strat_reward[2]
         info["step_rw/goal"] = strat_reward[3]
-        info['ep_rw/goal_blue'] = 1 if strat_reward[3] == 1 else 0
-        info['ep_rw/goal_yellow'] = 1 if strat_reward[3] == -1 else 0
+        info['ep_rw/goal_blue'] = 1 if strat_reward[3] > 0 else 0
+        info['ep_rw/goal_yellow'] = 1 if strat_reward[3] < -1 else 0
         
         return observation, original_reward, done, info
 
@@ -176,9 +177,9 @@ class VSSStratEnv(VSSBaseEnv):
 
         # Check if goal ocurred
         if self.frame.ball.x > (self.field.length / 2):
-            goal_reward = 1
+            goal_reward = 1 / self.goal_scale
         elif self.frame.ball.x < -(self.field.length / 2):
-            goal_reward = -1
+            goal_reward = -1 / self.goal_scale
         else:
             if self.last_frame is not None:
                 # Calculate Move ball
