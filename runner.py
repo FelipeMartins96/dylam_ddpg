@@ -8,15 +8,11 @@ from distutils.util import strtobool
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import envs
-from networks import QNetwork, Actor
+from agents import AgentDDPG
 
 def parse_args():
     # fmt: off
@@ -117,25 +113,9 @@ if __name__ == "__main__":
     envs = gym.vector.AsyncVectorEnv([make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)])
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    actor = Actor(envs).to(device)
-    qf1 = QNetwork(envs).to(device)
-    qf1_target = QNetwork(envs).to(device)
-    target_actor = Actor(envs).to(device)
-    target_actor.load_state_dict(actor.state_dict())
-    qf1_target.load_state_dict(qf1.state_dict())
-    q_optimizer = optim.Adam(list(qf1.parameters()), lr=args.learning_rate)
-    actor_optimizer = optim.Adam(list(actor.parameters()), lr=args.learning_rate)
+    agent = AgentDDPG(envs, device, args)
 
-    envs.single_observation_space.dtype = np.float32
-    rb = ReplayBuffer(
-        args.buffer_size,
-        envs.single_observation_space,
-        envs.single_action_space,
-        device,
-        handle_timeout_termination=True,
-    )
     start_time = time.time()
-
     # TRY NOT TO MODIFY: start the game
     obs = envs.reset()
     for envs_step in tqdm(range(0, args.total_timesteps, envs.num_envs)):
@@ -145,10 +125,7 @@ if __name__ == "__main__":
         if envs_step < args.learning_starts:
             actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
         else:
-            with torch.no_grad():
-                actions = actor(torch.Tensor(obs).to(device))
-                actions += torch.normal(actor.action_bias.expand(envs.num_envs,-1), actor.action_scale * args.exploration_noise)
-                actions = actions.cpu().numpy().clip(envs.single_action_space.low, envs.single_action_space.high)
+            actions = agent.sample_actions(obs)
 
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, dones, infos = envs.step(actions)
@@ -167,44 +144,18 @@ if __name__ == "__main__":
         for idx, d in enumerate(dones):
             if d:
                 real_next_obs[idx] = infos[idx]["terminal_observation"]
-        [rb.add(obs[i:i+1], real_next_obs[i:i+1], actions[i:i+1], rewards[i:i+1], dones[i:i+1], infos[i:i+1]) for i in range(envs.num_envs)]
+
+        agent.observe(obs, real_next_obs, actions, rewards, dones, infos)
 
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
         obs = next_obs
 
-        # ALGO LOGIC: training.
-        if envs_step > args.learning_starts:
-            data = rb.sample(args.batch_size)
-            with torch.no_grad():
-                next_state_actions = target_actor(data.next_observations)
-                qf1_next_target = qf1_target(data.next_observations, next_state_actions)
-                next_q_value = data.rewards.flatten() + (1 - data.dones.flatten()) * args.gamma * (qf1_next_target).view(-1)
+        update_info = agent.update(global_step)
 
-            qf1_a_values = qf1(data.observations, data.actions).view(-1)
-            qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
-
-            # optimize the model
-            q_optimizer.zero_grad()
-            qf1_loss.backward()
-            q_optimizer.step()
-
-            if global_step % args.policy_frequency == 0:
-                actor_loss = -qf1(data.observations, actor(data.observations)).mean()
-                actor_optimizer.zero_grad()
-                actor_loss.backward()
-                actor_optimizer.step()
-
-                # update the target network
-                for param, target_param in zip(actor.parameters(), target_actor.parameters()):
-                    target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
-                for param, target_param in zip(qf1.parameters(), qf1_target.parameters()):
-                    target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
-
-            if global_step % 100 == 0:
-                writer.add_scalar("losses/qf1_loss", qf1_loss.item(), envs_step)
-                writer.add_scalar("losses/actor_loss", actor_loss.item(), envs_step)
-                writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), envs_step)
-                writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
+        if update_info is not None and global_step % 100 == 0:
+            writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
+            for k, i in update_info.items():
+                writer.add_scalar(f'losses/{k}', i, envs_step)
 
     envs.close()
     writer.close()
