@@ -51,9 +51,10 @@ class VSSStratEnv(VSSBaseEnv):
         Episode Termination:
             30 seconds match time
     """
-    VSSBaseEnv.metadata['num_rewads'] = 4
+    VSSBaseEnv.metadata['num_rewards'] = 4
     VSSBaseEnv.metadata['r_min'] = np.array([0.0*0.66, 0.0*0.32, -2.0*0.0053, 0.0*0.008])
     VSSBaseEnv.metadata['r_max'] = np.array([0.5*0.66, 1.0*0.32, -1.0*0.0053, 1.0*0.008])
+    VSSBaseEnv.metadata['rewards_names'] = ['move', 'ball_grad', 'energy', 'goal']
 
     def __init__(self, n_robots_blue=3, n_robots_yellow=3):
         super().__init__(
@@ -68,7 +69,7 @@ class VSSStratEnv(VSSBaseEnv):
         # Initialize Class Atributes
         self.previous_ball_potential = None
         self.actions: Dict = None
-        self.cumulative_reward_info = None
+        self.cumulative_reward = np.array([0.0, 0.0, 0.0, 0.0])
         self.v_wheel_deadzone = 0.05
         self.move_scale = 120 / 0.66
         self.grad_scale = 0.75 / 0.32
@@ -85,8 +86,8 @@ class VSSStratEnv(VSSBaseEnv):
 
     def reset(self):
         self.actions = None
-        self.cumulative_reward_info = None
         self.previous_ball_potential = None
+        self.cumulative_reward = np.array([0.0, 0.0, 0.0, 0.0])
         for ou in self.ou_actions:
             ou.reset()
 
@@ -97,13 +98,13 @@ class VSSStratEnv(VSSBaseEnv):
 
         original_reward = strat_reward.sum()
 
-        info = self.cumulative_reward_info
-        info["step_rw/move"] = strat_reward[0]
-        info["step_rw/ball_grad"] = strat_reward[1]
-        info["step_rw/energy"] = strat_reward[2]
-        info["step_rw/goal"] = strat_reward[3]
-        info['ep_rw/goal_blue'] = 1 if strat_reward[3] > 0 else 0
-        info['ep_rw/goal_yellow'] = 1 if strat_reward[3] < -1 else 0
+        info = {'rewards': {}}
+        info['rewards']['ep'] = self.cumulative_reward
+        info['rewards']['step'] = strat_reward
+        info['rewards']['extra'] = {
+            'goal_blue': 1 if strat_reward[3] > 0 else 0,
+            'goal_yellow': 1 if strat_reward[3] < 0 else 0,
+        }
         
         return observation, original_reward, done, info
 
@@ -166,15 +167,6 @@ class VSSStratEnv(VSSBaseEnv):
         grad_ball_potential = 0
         energy_penalty = 0
 
-        if self.cumulative_reward_info is None:
-            self.cumulative_reward_info = {
-                "ep_rw/move": 0,
-                "ep_rw/ball_grad": 0,
-                "ep_rw/energy": 0,
-                "ep_rw/goal": 0,
-                "Original_reward": 0,
-            }
-
         # Check if goal ocurred
         if self.frame.ball.x > (self.field.length / 2):
             goal_reward = 1 / self.goal_scale
@@ -189,15 +181,12 @@ class VSSStratEnv(VSSBaseEnv):
                 # Calculate Energy penalty
                 energy_penalty = self.__energy_penalty()
 
-        rewards[0] += move_reward
-        rewards[1] += grad_ball_potential
-        rewards[2] += energy_penalty
-        rewards[3] += goal_reward
+        rewards[0] = move_reward
+        rewards[1] = grad_ball_potential
+        rewards[2] = energy_penalty
+        rewards[3] = goal_reward
 
-        self.cumulative_reward_info["ep_rw/move"] += rewards[0]
-        self.cumulative_reward_info["ep_rw/ball_grad"] += rewards[1]
-        self.cumulative_reward_info["ep_rw/energy"] += rewards[2]
-        self.cumulative_reward_info["ep_rw/goal"] += rewards[3]
+        self.cumulative_reward += rewards
         
         return rewards, (goal_reward != 0)
 

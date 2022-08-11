@@ -9,7 +9,7 @@ class QNetwork(nn.Module):
         super().__init__()
         self.fc1 = nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 400)
         self.fc2 = nn.Linear(400, 300)
-        self.fc3 = nn.Linear(300, 1)
+        self.fc3 = nn.Linear(300, env.metadata['num_rewards'])
 
     def forward(self, x, a):
         x = torch.cat([x, a], 1)
