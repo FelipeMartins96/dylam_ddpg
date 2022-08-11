@@ -13,6 +13,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 import envs
 from networks import QNetwork, Actor
@@ -137,7 +138,7 @@ if __name__ == "__main__":
 
     # TRY NOT TO MODIFY: start the game
     obs = envs.reset()
-    for envs_step in range(0, args.total_timesteps, envs.num_envs):
+    for envs_step in tqdm(range(0, args.total_timesteps, envs.num_envs)):
         global_step = envs_step / envs.num_envs
 
         # ALGO LOGIC: put action logic here
@@ -155,7 +156,6 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         for info in infos:
             if "episode" in info.keys():
-                print(f"envs_step={envs_step}, episodic_return={info['episode']['r']}")
                 writer.add_scalar("charts/episodic_return", info["episode"]["r"], envs_step)
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], envs_step)
                 rw_keys = [k for k in info.keys() if 'ep_rw/' in  k]
@@ -204,7 +204,6 @@ if __name__ == "__main__":
                 writer.add_scalar("losses/qf1_loss", qf1_loss.item(), envs_step)
                 writer.add_scalar("losses/actor_loss", actor_loss.item(), envs_step)
                 writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), envs_step)
-                print("SPS:", int(envs_step / (time.time() - start_time)))
                 writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
 
     envs.close()
