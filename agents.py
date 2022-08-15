@@ -56,6 +56,7 @@ class AgentDDPG:
         self.last_epi_rewards = StratLastRewards(10, self.num_rewards) # TODO: move 10 to args
         self.rew_tau = 0.995 # TODO: move to args
         self.last_rew_mean = None
+        self.dynamic = True # TODO: move to args
 
     def sample_actions(self, obs):
         with torch.no_grad():
@@ -82,7 +83,7 @@ class AgentDDPG:
         if self.rb.size() < self.args.learning_starts:
             return None
         
-        if self.last_epi_rewards.can_do():
+        if self.dynamic and self.last_epi_rewards.can_do():
             rew_mean_t = torch.Tensor(self.last_epi_rewards.mean()).to(self.device)
             if self.last_rew_mean is not None:
                 rew_mean_t = rew_mean_t + (self.last_rew_mean - rew_mean_t) * self.rew_tau
