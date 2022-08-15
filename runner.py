@@ -156,7 +156,7 @@ if __name__ == "__main__":
         if update_info is not None and global_step % 100 == 0:
             writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
             for k, i in update_info.items():
-                writer.add_scalar(f'losses/{k}', i, envs_step)
+                writer.add_scalar(k, i, envs_step)
 
     envs.close()
     writer.close()

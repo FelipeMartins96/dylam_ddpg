@@ -4,12 +4,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class QNetwork(nn.Module):
+class DylamQNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.fc1 = nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 400)
         self.fc2 = nn.Linear(400, 300)
         self.fc3 = nn.Linear(300, env.metadata['num_rewards'])
+
+    def forward(self, x, a):
+        x = torch.cat([x, a], 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+class QNetwork(nn.Module):
+    def __init__(self, env):
+        super().__init__()
+        self.fc1 = nn.Linear(np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape), 400)
+        self.fc2 = nn.Linear(400, 300)
+        self.fc3 = nn.Linear(300, 1)
 
     def forward(self, x, a):
         x = torch.cat([x, a], 1)
