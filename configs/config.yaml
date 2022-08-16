@@ -12,6 +12,10 @@ wandb:
   project_name: 'cleanRL'
   entity:
 
+hydra:
+  job:
+    chdir: True
+
 defaults:
   - agent: DylamDDPG
   - _self_

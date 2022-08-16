@@ -18,7 +18,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:
             if idx == 0:
-                env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+                env = gym.wrappers.RecordVideo(env, f"videos/")
         env.seed(seed)
         env.action_space.seed(seed)
         env.observation_space.seed(seed)
@@ -27,7 +27,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     return thunk
 
 def runner(cfg):
-    run_name = f"{cfg.env_id}__{cfg.exp_name}__{cfg.seed}__{int(time.time())}"
+    run_name = f"{cfg.env_id}__{cfg.exp_name}__{cfg.seed}"
     if cfg.track:
         import wandb
 
@@ -40,7 +40,7 @@ def runner(cfg):
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+    writer = SummaryWriter(f"logs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in dict(cfg).items()])),
