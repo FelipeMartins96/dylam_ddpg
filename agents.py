@@ -29,7 +29,7 @@ class AgentDylamDDPG:
             self, 
             envs, 
             device,
-            bach_size,
+            batch_size,
             buffer_size,
             dynamic,
             exploration_noise,
@@ -66,7 +66,7 @@ class AgentDylamDDPG:
         self.device = device
         self.envs = envs
 
-        self.batch_size = bach_size
+        self.batch_size = batch_size
         self.dynamic = dynamic
         self.exploration_noise = exploration_noise
         self.gamma = gamma
@@ -166,7 +166,7 @@ class AgentDDPG:
             self, 
             envs, 
             device,
-            bach_size,
+            batch_size,
             buffer_size,
             exploration_noise,
             gamma,
@@ -201,7 +201,7 @@ class AgentDDPG:
         self.envs = envs
         self.exploration_noise = exploration_noise
         self.learning_starts = int(learning_starts)
-        self.bach_size = int(bach_size)
+        self.batch_size = int(batch_size)
         self.gamma = gamma
         self.tau = tau
         self.policy_frequency = int(policy_frequency)

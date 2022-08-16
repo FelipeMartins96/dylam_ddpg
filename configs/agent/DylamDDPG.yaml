@@ -1,5 +1,5 @@
 _target_: agents.AgentDylamDDPG
-bach_size: 64
+batch_size: 64
 buffer_size: 1e6
 dynamic: True
 exploration_noise: 0.2
