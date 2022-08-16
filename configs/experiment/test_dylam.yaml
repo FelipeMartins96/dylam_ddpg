@@ -1,12 +1,12 @@
 exp_name:
 seed: 1
-torch_deterministic: True
+torch_deterministic: False
 cuda: True
 track: False
-capture_video: False
+capture_video: True
 env_id: vssStrat-v0
 num_envs: 10
-total_timesteps: 5e7
+total_timesteps: 1e7
 
 wandb:
   project_name: 'cleanRL'
@@ -21,5 +21,5 @@ agents:
     - b_0
 
 defaults:
-  - experiment: default
+  - agent@dylam_ddpg: DylamDDPG
   - _self_
