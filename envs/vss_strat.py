@@ -1,9 +1,8 @@
-import math
 import random
-from typing import Dict
 
 import gym
 import numpy as np
+from gym.spaces import Box, Dict
 from rsoccer_gym.Entities import Ball, Frame, Robot
 from rsoccer_gym.Utils import KDTree
 from rsoccer_gym.Utils.Utils import OrnsteinUhlenbeckAction
@@ -55,20 +54,22 @@ class VSSStratEnv(VSSBaseEnv):
     VSSBaseEnv.metadata['r_min'] = np.array([0.0*0.66, 0.0*0.32, -2.0*0.0053, 0.0*0.008])
     VSSBaseEnv.metadata['r_max'] = np.array([0.5*0.66, 1.0*0.32, -1.0*0.0053, 1.0*0.008])
     VSSBaseEnv.metadata['rewards_names'] = ['move', 'ball_grad', 'energy', 'goal']
+    VSSBaseEnv.metadata["video.frames_per_second"] = 40
 
     def __init__(self, n_robots_blue=3, n_robots_yellow=3):
         super().__init__(
             field_type=0, n_robots_blue=n_robots_blue, n_robots_yellow=n_robots_yellow, time_step=0.025
         )
 
-        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
-        self.observation_space = gym.spaces.Box(
-            low=-self.NORM_BOUNDS, high=self.NORM_BOUNDS, shape=(40,), dtype=np.float32
-        )
+        # agent_keys = [f'b_{idx}' for idx in range(n_robots_blue)] + [f'y_{idx}' for idx in range(n_robots_yellow)]
+        self.metadata['actors_keys'] = ['b_0']
+
+        self.action_space = Dict({actor_key: Box(low=-1, high=1, shape=(2,), dtype=np.float32) for actor_key in self.metadata['actors_keys']})
+        self.observation_space = Dict({actor_key: Box(low=-self.NORM_BOUNDS, high=self.NORM_BOUNDS, shape=(40,), dtype=np.float32) for actor_key in self.metadata['actors_keys']})
 
         # Initialize Class Atributes
         self.previous_ball_potential = None
-        self.actions: Dict = None
+        self.actions = None
         self.cumulative_reward = np.array([0.0, 0.0, 0.0, 0.0])
         self.v_wheel_deadzone = 0.05
         self.move_scale = 120 / 0.66
@@ -79,7 +80,7 @@ class VSSStratEnv(VSSBaseEnv):
         self.ou_actions = []
         for i in range(self.n_robots_blue + self.n_robots_yellow):
             self.ou_actions.append(
-                OrnsteinUhlenbeckAction(self.action_space, dt=self.time_step)
+                OrnsteinUhlenbeckAction(Box(low=-1, high=1, shape=(2,), dtype=np.float32), dt=self.time_step)
             )
         
         print("dylam_ddpg/envs/vss_strat Environment initialized")
@@ -98,10 +99,10 @@ class VSSStratEnv(VSSBaseEnv):
 
         original_reward = strat_reward.sum()
 
-        info = {'rewards': {}}
-        info['rewards']['ep'] = self.cumulative_reward
-        info['rewards']['step'] = strat_reward
-        info['rewards']['extra'] = {
+        info = {'b_0': {'rewards': {}}}
+        info['b_0']['rewards']['ep'] = self.cumulative_reward
+        info['b_0']['rewards']['step'] = strat_reward
+        info['extra'] = {
             'goal_blue': 1 if strat_reward[3] > 0 else 0,
             'goal_yellow': 1 if strat_reward[3] < 0 else 0,
         }
@@ -133,9 +134,10 @@ class VSSStratEnv(VSSBaseEnv):
             observation.append(self.norm_v(self.frame.robots_yellow[i].v_y))
             observation.append(self.norm_w(self.frame.robots_yellow[i].v_theta))
 
-        return np.array(observation, dtype=np.float32)
+        return {'b_0': np.array(observation, dtype=np.float32)}
 
     def _get_commands(self, actions):
+        actions = actions['b_0']
         commands = []
         self.actions = {}
 

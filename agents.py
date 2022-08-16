@@ -88,16 +88,16 @@ class AgentDylamDDPG:
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
 
-    def observe(self, obs, _obs, actions, rws, dones, infos):
+    def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
         for idx, d in enumerate(dones):
             if d:
-                self.last_epi_rewards.add(infos[idx]["rewards"]["ep"])
+                self.last_epi_rewards.add(infos[idx][actor_key]["rewards"]["ep"])
             s = slice(idx,idx+1)
             self.rb.add(
                 obs[s],
                 _obs[s],
                 actions[s],
-                infos[idx]["rewards"]["step"].reshape(1,-1),
+                infos[idx][actor_key]["rewards"]["step"].reshape(1,-1),
                 dones[s],
                 infos[s]
             )
@@ -213,7 +213,7 @@ class AgentDDPG:
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
 
-    def observe(self, obs, _obs, actions, rws, dones, infos):
+    def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
         for idx, d in enumerate(dones):
             s = slice(idx,idx+1)
             self.rb.add(

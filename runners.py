@@ -60,21 +60,37 @@ def runner(cfg):
         [make_env(cfg.env_id, cfg.seed + i, i, cfg.capture_video, run_name) 
         for i in range(cfg.num_envs)]
     )
+    # Change vector env spaces to non dict, as its the same for all actors
+    dummy_env = gym.make(cfg.env_id)
+    actors_keys = dummy_env.metadata['actors_keys']
+    envs.single_action_space = dummy_env.action_space[actors_keys[0]]
+    envs.single_observation_space = dummy_env.observation_space[actors_keys[0]]
+    dummy_env.close()
+    del dummy_env
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = instantiate(cfg.agent, envs=envs, device=device)
+    agents = {}
+    agent_actors = {}
+    for k in cfg.agents:
+        agents[k] = instantiate(cfg[k], envs=envs, device=device)
+        agent_actors[k] = cfg.agents[k]
 
     start_time = time.time()
+    
     # TRY NOT TO MODIFY: start the game
     obs = envs.reset()
     for envs_step in tqdm(range(0, int(cfg.total_timesteps), envs.num_envs)):
         global_step = envs_step / envs.num_envs
 
-        # ALGO LOGIC: put action logic here
-        if envs_step < agent.learning_starts:
-            actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
-        else:
-            actions = agent.sample_actions(obs)
+        actions = {}
+        for k in agents.keys():
+            for actor in agent_actors[k]:
+                # ALGO LOGIC: put action logic here
+                if envs_step < agents[k].learning_starts:
+                    actions[actor] = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+                else:
+                    actions[actor] = agents[k].sample_actions(obs[actor])
 
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, dones, infos = envs.step(actions)
@@ -82,11 +98,12 @@ def runner(cfg):
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         for info in infos:
             if "episode" in info.keys():
-                writer.add_scalar("rw_total/episodic_return", info["episode"]["r"], envs_step)
                 writer.add_scalar("extra/episodic_length", info["episode"]["l"], envs_step)
-                ep_rws = info['rewards']['ep']
-                [writer.add_scalar(f'rw_{n}/episodic_return', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
-                [writer.add_scalar(f'extra/{k}', v, envs_step) for k, v in info['rewards']['extra'].items()]
+                [writer.add_scalar(f'extra/{k}', v, envs_step) for k, v in info['extra'].items()]
+                
+                for actor_key in actors_keys:
+                    ep_rws = info[actor_key]['rewards']['ep']
+                    [writer.add_scalar(f'actor_{actor_key}/rw_{n}/episodic_return', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
@@ -95,17 +112,19 @@ def runner(cfg):
             if d:
                 real_next_obs[idx] = infos[idx]["terminal_observation"]
 
-        agent.observe(obs, real_next_obs, actions, rewards, dones, infos)
+        for agent_k in agents.keys():
+            for actor in agent_actors[agent_k]:
+                agents[agent_k].observe(obs[actor], real_next_obs[actor], actions[actor], rewards, dones, infos, actor)
 
+            update_info = agents[agent_k].update(global_step)
+
+            if update_info is not None and global_step % 100 == 0:
+                for k, i in update_info.items():
+                    writer.add_scalar(f'{agent_k}/{k}', i, envs_step)
+
+        writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
         obs = next_obs
-
-        update_info = agent.update(global_step)
-
-        if update_info is not None and global_step % 100 == 0:
-            writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
-            for k, i in update_info.items():
-                writer.add_scalar(k, i, envs_step)
 
     envs.close()
     writer.close()

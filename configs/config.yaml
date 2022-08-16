@@ -16,6 +16,10 @@ hydra:
   job:
     chdir: True
 
+agents:
+  dylam_ddpg:
+    - b_0
+
 defaults:
-  - agent: DylamDDPG
+  - agent@dylam_ddpg: DylamDDPG
   - _self_
