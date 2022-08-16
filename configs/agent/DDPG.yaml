@@ -1,0 +1,10 @@
+_target_: agents.AgentDDPG
+bach_size: 64
+buffer_size: 1e6
+exploration_noise: 0.2
+gamma: 0.95
+learning_rate_q: 2e-4 
+learning_rate_actor: 1e-4
+learning_starts: 1e5
+policy_frequency: 1
+tau: 0.005

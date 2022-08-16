@@ -25,21 +25,37 @@ class StratLastRewards:
         return self.rewards.mean(0)
 
 class AgentDylamDDPG:
-    def __init__(self, envs, device, args):
+    def __init__(
+            self, 
+            envs, 
+            device,
+            bach_size,
+            buffer_size,
+            dynamic,
+            exploration_noise,
+            gamma,
+            learning_rate_q,
+            learning_rate_actor,
+            learning_starts,
+            n_last_ep_rewards,
+            policy_frequency,
+            rew_tau,
+            tau,
+        ):
         self.actor = Actor(envs).to(device)
         self.qf1 = DylamQNetwork(envs).to(device)
         self.qf1_target = DylamQNetwork(envs).to(device)
         self.target_actor = Actor(envs).to(device)
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.qf1_target.load_state_dict(self.qf1.state_dict())
-        self.q_optimizer = optim.Adam(list(self.qf1.parameters()), lr=args.learning_rate)
-        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), lr=args.learning_rate)
+        self.q_optimizer = optim.Adam(list(self.qf1.parameters()), lr=learning_rate_q)
+        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), lr=learning_rate_actor)
         
         self.num_rewards = envs.metadata['num_rewards']
 
         envs.single_observation_space.dtype = np.float32
         self.rb = StratReplayBuffer(
-            args.buffer_size,
+            int(buffer_size),
             envs.single_observation_space,
             envs.single_action_space,
             self.num_rewards,
@@ -49,20 +65,26 @@ class AgentDylamDDPG:
 
         self.device = device
         self.envs = envs
-        self.args = args
 
+        self.batch_size = bach_size
+        self.dynamic = dynamic
+        self.exploration_noise = exploration_noise
+        self.gamma = gamma
+        self.learning_starts = learning_starts
+        self.policy_frequency = policy_frequency
+        self.rew_tau =rew_tau
+        self.tau = tau
+
+        self.last_epi_rewards = StratLastRewards(n_last_ep_rewards, self.num_rewards)
         self.r_min = torch.tensor(envs.metadata['r_min'], dtype=torch.float, device=self.device)
         self.r_max = torch.tensor(envs.metadata['r_max'], dtype=torch.float, device=self.device)
         self.rw_names = envs.metadata['rewards_names']
-        self.last_epi_rewards = StratLastRewards(10, self.num_rewards) # TODO: move 10 to args
-        self.rew_tau = 0.995 # TODO: move to args
         self.last_rew_mean = None
-        self.dynamic = True # TODO: move to args
 
     def sample_actions(self, obs):
         with torch.no_grad():
             actions = self.actor(torch.Tensor(obs).to(self.device))
-            actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.args.exploration_noise)
+            actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.exploration_noise)
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
 
@@ -81,13 +103,13 @@ class AgentDylamDDPG:
             )
     
     def update(self, global_step):
-        if self.rb.size() < self.args.learning_starts:
+        if self.rb.size() < self.learning_starts:
             return None
         
         if self.dynamic and self.last_epi_rewards.can_do():
             rew_mean_t = torch.Tensor(self.last_epi_rewards.mean()).to(self.device)
             if self.last_rew_mean is not None:
-                rew_mean_t = rew_mean_t + (self.last_rew_mean - rew_mean_t) * self.rew_tau
+                rew_mean_t = rew_mean_t + (self.last_rew_mean - rew_mean_t) * (1- self.rew_tau)
             dQ = torch.clamp((self.r_max - rew_mean_t) / (self.r_max - self.r_min), 0, 1)
             expdQ = torch.exp(dQ) - 1
             lambdas = expdQ / (torch.sum(expdQ, 0) + 1e-4)
@@ -96,12 +118,12 @@ class AgentDylamDDPG:
             lambdas = torch.ones(self.num_rewards, dtype=torch.float, device=self.device) / self.num_rewards
 
         info = {}
-        data = self.rb.sample(self.args.batch_size)
+        data = self.rb.sample(self.batch_size)
 
         with torch.no_grad():
             next_state_actions = self.target_actor(data.next_observations)
             qf1_next_targets = self.qf1_target(data.next_observations, next_state_actions)
-            next_q_values = data.rewards + (1 - data.dones.expand(-1, self.num_rewards)) * self.args.gamma * qf1_next_targets
+            next_q_values = data.rewards + (1 - data.dones.expand(-1, self.num_rewards)) * self.gamma * qf1_next_targets
 
         qf1_a_values = self.qf1(data.observations, data.actions)
 
@@ -120,7 +142,7 @@ class AgentDylamDDPG:
             info[f'rw_{n}/qf1_a_value'] = qf1_a_values_mean[idx].item()
             info[f'rw_{n}/lambda'] = lambdas[idx].item()
 
-        if global_step % self.args.policy_frequency == 0:
+        if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
             actor_loss = -(qf1s * lambdas).sum(1).mean()
             self.actor_optimizer.zero_grad()
@@ -129,9 +151,9 @@ class AgentDylamDDPG:
 
             # update the target network
             for param, target_param in zip(self.actor.parameters(), self.target_actor.parameters()):
-                target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
             for param, target_param in zip(self.qf1.parameters(), self.qf1_target.parameters()):
-                target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
             info.update({
                 "losses/actor_loss": actor_loss.item(),
@@ -140,21 +162,34 @@ class AgentDylamDDPG:
         return info
 
 class AgentDDPG:
-    def __init__(self, envs, device, args):
+    def __init__(
+            self, 
+            envs, 
+            device,
+            bach_size,
+            buffer_size,
+            exploration_noise,
+            gamma,
+            learning_rate_q,
+            learning_rate_actor,
+            learning_starts,
+            policy_frequency,
+            tau,
+        ):
         self.actor = Actor(envs).to(device)
         self.qf1 = QNetwork(envs).to(device)
         self.qf1_target = QNetwork(envs).to(device)
         self.target_actor = Actor(envs).to(device)
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.qf1_target.load_state_dict(self.qf1.state_dict())
-        self.q_optimizer = optim.Adam(list(self.qf1.parameters()), lr=args.learning_rate)
-        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), lr=args.learning_rate)
+        self.q_optimizer = optim.Adam(list(self.qf1.parameters()), lr=learning_rate_q)
+        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), lr=learning_rate_actor)
 
         self.num_rewards = 1
 
         envs.single_observation_space.dtype = np.float32
         self.rb = StratReplayBuffer(
-            args.buffer_size,
+            int(buffer_size),
             envs.single_observation_space,
             envs.single_action_space,
             self.num_rewards,
@@ -164,12 +199,17 @@ class AgentDDPG:
 
         self.device = device
         self.envs = envs
-        self.args = args
+        self.exploration_noise = exploration_noise
+        self.learning_starts = int(learning_starts)
+        self.bach_size = int(bach_size)
+        self.gamma = gamma
+        self.tau = tau
+        self.policy_frequency = int(policy_frequency)
 
     def sample_actions(self, obs):
         with torch.no_grad():
             actions = self.actor(torch.Tensor(obs).to(self.device))
-            actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.args.exploration_noise)
+            actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.exploration_noise)
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
 
@@ -186,16 +226,16 @@ class AgentDDPG:
             )
     
     def update(self, global_step):
-        if self.rb.size() < self.args.learning_starts:
+        if self.rb.size() < self.learning_starts:
             return None
 
         info = {}
-        data = self.rb.sample(self.args.batch_size)
+        data = self.rb.sample(self.batch_size)
 
         with torch.no_grad():
             next_state_actions = self.target_actor(data.next_observations)
             qf1_next_targets = self.qf1_target(data.next_observations, next_state_actions)
-            next_q_values = data.rewards + (1 - data.dones.expand(-1, self.num_rewards)) * self.args.gamma * qf1_next_targets
+            next_q_values = data.rewards + (1 - data.dones.expand(-1, self.num_rewards)) * self.gamma * qf1_next_targets
 
         qf1_a_values = self.qf1(data.observations, data.actions)
         qf1_losses = torch.nn.MSELoss(reduction='none')(qf1_a_values, next_q_values).mean(0)
@@ -211,7 +251,7 @@ class AgentDDPG:
             qf1_a_values_mean = qf1_a_values.mean(0)
         info[f'rw_total/qf1_a_value'] = qf1_a_values_mean[0].item()
 
-        if global_step % self.args.policy_frequency == 0:
+        if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
             actor_loss = -qf1s.mean()
             self.actor_optimizer.zero_grad()
@@ -220,9 +260,9 @@ class AgentDDPG:
 
             # update the target network
             for param, target_param in zip(self.actor.parameters(), self.target_actor.parameters()):
-                target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
             for param, target_param in zip(self.qf1.parameters(), self.qf1_target.parameters()):
-                target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
             info.update({
                 "losses/actor_loss": actor_loss.item(),
