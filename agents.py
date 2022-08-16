@@ -113,12 +113,12 @@ class AgentDylamDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['agentDylamDDPG/qf1_loss'] = qf1_loss.item()
+        info['losses/qf1_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
-        for r in range(self.num_rewards):
-            info[f'agentDylamDDPG/r{r}/qf1_a_value'] = qf1_a_values_mean[r].item()
-            info[f'agentDylamDDPG/r{r}/lambda'] = lambdas[r].item()
+        for idx, n in enumerate(self.rw_names):
+            info[f'rw_{n}/qf1_a_value'] = qf1_a_values_mean[idx].item()
+            info[f'rw_{n}/lambda'] = lambdas[idx].item()
 
         if global_step % self.args.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
@@ -134,7 +134,7 @@ class AgentDylamDDPG:
                 target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
 
             info.update({
-                "agentDylamDDPG/actor_loss": actor_loss.item(),
+                "losses/actor_loss": actor_loss.item(),
             })
 
         return info
@@ -206,11 +206,10 @@ class AgentDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['agentDDPG/qf1_loss'] = qf1_loss.item()
+        info['losses/qf1_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
-        for r in range(self.num_rewards):
-            info[f'agentDDPG/r{r}/qf1_a_value'] = qf1_a_values_mean[r].item()
+        info[f'rw_total/qf1_a_value'] = qf1_a_values_mean[0].item()
 
         if global_step % self.args.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
@@ -226,7 +225,7 @@ class AgentDDPG:
                 target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
 
             info.update({
-                "agentDDPG/actor_loss": actor_loss.item(),
+                "losses/actor_loss": actor_loss.item(),
             })
 
         return info

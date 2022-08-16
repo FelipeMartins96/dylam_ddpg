@@ -133,11 +133,11 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         for info in infos:
             if "episode" in info.keys():
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], envs_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], envs_step)
+                writer.add_scalar("rw_total/episodic_return", info["episode"]["r"], envs_step)
+                writer.add_scalar("extra/episodic_length", info["episode"]["l"], envs_step)
                 ep_rws = info['rewards']['ep']
-                [writer.add_scalar(f'ep_rw/{n}', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
-                [writer.add_scalar(f'ep_rw/{k}', v, envs_step) for k, v in info['rewards']['extra'].items()]
+                [writer.add_scalar(f'rw_{n}/episodic_return', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
+                [writer.add_scalar(f'extra/{k}', v, envs_step) for k, v in info['rewards']['extra'].items()]
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
