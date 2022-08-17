@@ -70,6 +70,7 @@ def runner(cfg):
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
+    # Dict of agents and dict of the actors which each agent controls
     agents = {}
     agent_actors = {}
     for k in cfg.agents:
@@ -83,6 +84,7 @@ def runner(cfg):
     for envs_step in tqdm(range(0, int(cfg.total_timesteps), envs.num_envs)):
         global_step = envs_step / envs.num_envs
 
+        # Fill an dict with actions for every actor by looping every agent
         actions = {}
         for k in agents.keys():
             for actor in agent_actors[k]:

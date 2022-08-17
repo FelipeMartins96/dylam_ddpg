@@ -16,10 +16,6 @@ hydra:
   job:
     chdir: True
 
-agents:
-  dylam_ddpg:
-    - b_0
-
 defaults:
   - experiment: default
   - _self_
