@@ -124,6 +124,7 @@ def runner(cfg):
             if d:
                 for actor_key in env_actors_keys:
                     real_next_obs[actor_key][idx] = infos[idx]["terminal_observation"][actor_key]
+                    dones[idx] = not infos[idx].get("TimeLimit.truncated", False)
 
         for agent in agents:
             for actor in agent.actors:

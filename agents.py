@@ -60,7 +60,7 @@ class AgentDylamDDPG:
             envs.single_action_space,
             self.num_rewards,
             device,
-            handle_timeout_termination=True,
+            handle_timeout_termination=False,
         )
 
         self.device = device
@@ -89,15 +89,15 @@ class AgentDylamDDPG:
         return actions
 
     def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
-        for idx, d in enumerate(dones):
-            if d:
-                self.last_epi_rewards.add(infos[idx][actor_key]["rewards"]["ep"])
+        for idx, info in enumerate(infos):
+            if "episode" in info.keys():
+                self.last_epi_rewards.add(info[actor_key]["rewards"]["ep"])
             s = slice(idx,idx+1)
             self.rb.add(
                 obs[s],
                 _obs[s],
                 actions[s],
-                infos[idx][actor_key]["rewards"]["step"].reshape(1,-1),
+                info[actor_key]["rewards"]["step"].reshape(1,-1),
                 dones[s],
                 infos[s]
             )
@@ -198,7 +198,7 @@ class AgentDDPG:
             envs.single_action_space,
             self.num_rewards,
             device,
-            handle_timeout_termination=True,
+            handle_timeout_termination=False,
         )
 
         self.device = device
