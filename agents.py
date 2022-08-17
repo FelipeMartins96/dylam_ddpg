@@ -161,6 +161,10 @@ class AgentDylamDDPG:
 
         return info
 
+    def save_actor(self, path):
+        torch.save(self.actor.state_dict(), path)
+
+
 class AgentDDPG:
     def __init__(
             self, 
@@ -269,3 +273,6 @@ class AgentDDPG:
             })
 
         return info
+
+    def save_actor(self, path):
+        torch.save(self.actor.state_dict(), path)

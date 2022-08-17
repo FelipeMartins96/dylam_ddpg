@@ -128,5 +128,8 @@ def runner(cfg):
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
         obs = next_obs
 
+    for k in agents.keys():
+        agents[k].save_actor(f'model_{k}.pt')
+
     envs.close()
     writer.close()
