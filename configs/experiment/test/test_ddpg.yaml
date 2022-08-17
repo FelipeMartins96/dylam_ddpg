@@ -1,0 +1,12 @@
+capture_video: True
+exp_name: test_ddpg
+
+agents:
+  DDPG:
+    agent: DDPG
+    actors:
+      - b_0
+
+defaults:
+  - default
+  - _self_

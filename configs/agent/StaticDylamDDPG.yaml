@@ -1,0 +1,5 @@
+defaults:
+ - DylamDDPG
+ - _self_
+
+dynamic: False

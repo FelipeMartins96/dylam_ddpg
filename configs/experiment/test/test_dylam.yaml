@@ -1,0 +1,12 @@
+capture_video: True
+exp_name: test_dylam
+
+agents:
+  Dylam:
+    agent: DylamDDPG
+    actors:
+      - b_0
+
+defaults:
+  - default
+  - _self_

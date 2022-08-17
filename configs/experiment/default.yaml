@@ -1,25 +1,20 @@
 exp_name:
 seed: 1
-torch_deterministic: True
+torch_deterministic: False
 cuda: True
 track: False
 capture_video: False
 env_id: vssStrat-v0
 num_envs: 10
-total_timesteps: 5e7
+total_timesteps: 1e7
 
 wandb:
-  project_name: 'cleanRL'
+  project_name: 'DylamDDPG'
   entity:
 
-hydra:
-  job:
-    chdir: True
-
-agents:
-  dylam_ddpg:
-    - b_0
-
 defaults:
-  - agent@dylam_ddpg: DylamDDPG
+  - /agent@DDPG: DDPG
+  - /agent@DylamDDPG: DylamDDPG
+  - /agent@StaticDylamDDPG: StaticDylamDDPG
   - _self_
+

@@ -1,4 +1,6 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ddpg/#ddpg_continuous_actionpy
+from collections import namedtuple
+from copy import deepcopy
 import random
 import time
 from distutils.util import strtobool
@@ -11,6 +13,8 @@ from tqdm import tqdm
 from hydra.utils import instantiate
 
 import envs
+
+Agent = namedtuple("Agent", ["name", "actors", "instance"])
 
 def make_env(env_id, seed, idx, capture_video, run_name):
     def thunk():
@@ -28,6 +32,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
 
 def runner(cfg):
     run_name = f"{cfg.env_id}__{cfg.exp_name}__{cfg.seed}"
+    
     if cfg.track:
         import wandb
 
@@ -40,6 +45,7 @@ def runner(cfg):
             monitor_gym=True,
             save_code=True,
         )
+    
     writer = SummaryWriter(f"logs/{run_name}")
     writer.add_text(
         "hyperparameters",
@@ -70,12 +76,16 @@ def runner(cfg):
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    # Dict of agents and dict of the actors which each agent controls
-    agents = {}
-    agent_actors = {}
-    for k in cfg.agents:
-        agents[k] = instantiate(cfg[k], envs=envs, device=device)
-        agent_actors[k] = cfg.agents[k]
+    # List of agents and its controlled actors
+    agents = []
+    for name, value in cfg.agents.items():
+        agents.append(
+            Agent(
+                name=name, 
+                actors=value.actors,
+                instance=instantiate(cfg[value.agent], envs=envs, device=device)
+            )
+        )
 
     start_time = time.time()
     
@@ -86,13 +96,13 @@ def runner(cfg):
 
         # Fill an dict with actions for every actor by looping every agent
         actions = {}
-        for k in agents.keys():
-            for actor in agent_actors[k]:
-                # ALGO LOGIC: put action logic here
-                if envs_step < agents[k].learning_starts:
+        for agent in agents:
+            for actor in agent.actors:
+                # ALGO LOGIC: put action logic here TODO: move learning starts check to inside agent
+                if envs_step <agent.instance.learning_starts:
                     actions[actor] = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 else:
-                    actions[actor] = agents[k].sample_actions(obs[actor])
+                    actions[actor] = agent.instance.sample_actions(obs[actor])
 
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, dones, infos = envs.step(actions)
@@ -115,22 +125,22 @@ def runner(cfg):
                 for actor_key in env_actors_keys:
                     real_next_obs[actor_key][idx] = infos[idx]["terminal_observation"][actor_key]
 
-        for agent_k in agents.keys():
-            for actor in agent_actors[agent_k]:
-                agents[agent_k].observe(obs[actor], real_next_obs[actor], actions[actor], rewards, dones, infos, actor)
+        for agent in agents:
+            for actor in agent.actors:
+                agent.instance.observe(obs[actor], real_next_obs[actor], actions[actor], rewards, dones, infos, actor)
 
-            update_info = agents[agent_k].update(global_step)
+            update_info = agent.instance.update(global_step)
 
             if update_info is not None and global_step % 100 == 0:
                 for k, i in update_info.items():
-                    writer.add_scalar(f'{agent_k}/{k}', i, envs_step)
+                    writer.add_scalar(f'{agent.name}/{k}', i, envs_step)
 
         writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
         obs = next_obs
 
-    for k in agents.keys():
-        agents[k].save_actor(f'model_{k}.pt')
+    for agent in agents:
+        agent.instance.save_actor(f'model_{agent.name}.pt')
 
     envs.close()
     writer.close()
