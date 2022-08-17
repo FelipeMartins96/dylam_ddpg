@@ -62,9 +62,9 @@ def runner(cfg):
     )
     # Change vector env spaces to non dict, as its the same for all actors
     dummy_env = gym.make(cfg.env_id)
-    actors_keys = dummy_env.metadata['actors_keys']
-    envs.single_action_space = dummy_env.action_space[actors_keys[0]]
-    envs.single_observation_space = dummy_env.observation_space[actors_keys[0]]
+    env_actors_keys = dummy_env.metadata['actors_keys']
+    envs.single_action_space = dummy_env.action_space[env_actors_keys[0]]
+    envs.single_observation_space = dummy_env.observation_space[env_actors_keys[0]]
     dummy_env.close()
     del dummy_env
 
@@ -103,16 +103,17 @@ def runner(cfg):
                 writer.add_scalar("extra/episodic_length", info["episode"]["l"], envs_step)
                 [writer.add_scalar(f'extra/{k}', v, envs_step) for k, v in info['extra'].items()]
                 
-                for actor_key in actors_keys:
+                for actor_key in env_actors_keys:
                     ep_rws = info[actor_key]['rewards']['ep']
                     [writer.add_scalar(f'actor_{actor_key}/rw_{n}/episodic_return', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
-        real_next_obs = next_obs.copy()
+        real_next_obs = deepcopy(next_obs)
         for idx, d in enumerate(dones):
             if d:
-                real_next_obs[idx] = infos[idx]["terminal_observation"]
+                for actor_key in env_actors_keys:
+                    real_next_obs[actor_key][idx] = infos[idx]["terminal_observation"][actor_key]
 
         for agent_k in agents.keys():
             for actor in agent_actors[agent_k]:
