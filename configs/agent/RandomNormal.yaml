@@ -1,0 +1,2 @@
+_target_: agents.AgentRandomNormal
+sigma: 0.2

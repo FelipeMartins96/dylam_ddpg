@@ -24,6 +24,29 @@ class StratLastRewards:
     def mean(self):
         return self.rewards.mean(0)
 
+class AgentRandomNormal:
+    def __init__(
+            self, 
+            envs, 
+            device,
+            sigma
+    ):
+        self.device = device
+        self.envs = envs
+        self.sigma = sigma
+        self.action_bias = np.tile((self.envs.single_action_space.high + self.envs.single_action_space.low) / 2.0, (self.envs.num_envs, 1))
+        self.action_scale = np.tile((self.envs.single_action_space.high - self.envs.single_action_space.low) / 2.0, (self.envs.num_envs, 1))
+    
+    def sample_actions(self, obs):
+        return np.random.normal(self.action_bias, self.action_scale * self.sigma).clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
+
+    def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
+        pass
+    
+    def update(self, global_step):
+        return None
+
+
 class AgentDDPG:
     def __init__(
             self, 

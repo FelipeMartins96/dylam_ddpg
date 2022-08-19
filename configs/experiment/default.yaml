@@ -12,9 +12,16 @@ wandb:
   project_name: 'DylamDDPG'
   entity:
 
+agents:
+  Normal:
+    agent: RandomNormal
+    actors:
+      - b_0
+
 defaults:
   - /agent@DDPG: DDPG
   - /agent@DylamDDPG: DylamDDPG
   - /agent@StaticDylamDDPG: StaticDylamDDPG
+  - /agent@RandomNormal: RandomNormal
   - _self_
 
