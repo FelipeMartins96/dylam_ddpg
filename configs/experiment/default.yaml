@@ -13,8 +13,8 @@ wandb:
   entity:
 
 agents:
-  Normal:
-    agent: RandomNormal
+  Random:
+    agent: RandomOU
     actors:
       - b_0
 
@@ -23,5 +23,6 @@ defaults:
   - /agent@DylamDDPG: DylamDDPG
   - /agent@StaticDylamDDPG: StaticDylamDDPG
   - /agent@RandomNormal: RandomNormal
+  - /agent@RandomOU: RandomOU
   - _self_
 

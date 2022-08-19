@@ -46,6 +46,36 @@ class AgentRandomNormal:
     def update(self, global_step):
         return None
 
+class AgentRandomOU:
+    def __init__(
+            self, 
+            envs, 
+            device,
+            sigma,
+            theta
+    ):
+        self.device = device
+        self.envs = envs
+        self.sigma = sigma
+        self.theta = theta
+        self.action_bias = np.tile((self.envs.single_action_space.high + self.envs.single_action_space.low) / 2.0, (self.envs.num_envs, 1))
+        self.action_scale = np.tile((self.envs.single_action_space.high - self.envs.single_action_space.low) / 2.0, (self.envs.num_envs, 1))
+        self.noise = self.action_bias.copy()
+    
+    def sample_actions(self, obs):
+        self.noise += self.theta * (self.action_bias - self.noise) + np.random.normal(self.action_bias, self.action_scale * self.sigma)
+        self.noise = np.clip(self.noise, self.envs.single_action_space.low, self.envs.single_action_space.high)
+        return self.noise
+
+    def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
+        for idx, info in enumerate(infos):
+            if "episode" in info.keys():
+                self.noise[idx] = self.action_bias[idx]
+        pass
+    
+    def update(self, global_step):
+        return None
+
 
 class AgentDDPG:
     def __init__(
