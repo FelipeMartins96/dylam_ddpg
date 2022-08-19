@@ -83,7 +83,10 @@ class AgentDylamDDPG:
 
     def sample_actions(self, obs):
         with torch.no_grad():
-            actions = self.actor(torch.Tensor(obs).to(self.device))
+            if self.rb.size() != 0 and self.rb.size() < self.learning_starts:
+                actions = self.actor.action_bias.expand(self.envs.num_envs,-1).clone()
+            else:
+                actions = self.actor(torch.Tensor(obs).to(self.device))
             actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.exploration_noise)
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
@@ -103,7 +106,7 @@ class AgentDylamDDPG:
             )
     
     def update(self, global_step):
-        if self.rb.size() < self.learning_starts:
+        if self.rb.size() < self.learning_starts or self.rb.size() == 0:
             return None
         
         if self.dynamic and self.last_epi_rewards.can_do():
@@ -212,7 +215,10 @@ class AgentDDPG:
 
     def sample_actions(self, obs):
         with torch.no_grad():
-            actions = self.actor(torch.Tensor(obs).to(self.device))
+            if self.rb.size() != 0 and self.rb.size() < self.learning_starts:
+                actions = self.actor.action_bias.expand(self.envs.num_envs,-1).clone()
+            else:
+                actions = self.actor(torch.Tensor(obs).to(self.device))
             actions += torch.normal(self.actor.action_bias.expand(self.envs.num_envs,-1), self.actor.action_scale * self.exploration_noise)
             actions = actions.cpu().numpy().clip(self.envs.single_action_space.low, self.envs.single_action_space.high)
         return actions
@@ -230,7 +236,7 @@ class AgentDDPG:
             )
     
     def update(self, global_step):
-        if self.rb.size() < self.learning_starts:
+        if self.rb.size() < self.learning_starts or self.rb.size() == 0:
             return None
 
         info = {}

@@ -98,11 +98,7 @@ def runner(cfg):
         actions = {}
         for agent in agents:
             for actor in agent.actors:
-                # ALGO LOGIC: put action logic here TODO: move learning starts check to inside agent
-                if envs_step <agent.instance.learning_starts:
-                    actions[actor] = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
-                else:
-                    actions[actor] = agent.instance.sample_actions(obs[actor])
+                actions[actor] = agent.instance.sample_actions(obs[actor])
 
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, dones, infos = envs.step(actions)
