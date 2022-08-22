@@ -1,0 +1,18 @@
+capture_video: True
+exp_name: ddpg_2v1_random
+num_envs: 5 # same number of obs as the actor gets twice as many obs per step
+
+agents:
+  DDPG:
+    agent: DDPG
+    actors:
+      - b_0
+      - b_1
+  random0:
+    agent: RandomOU
+    actors:
+      - y_0
+
+defaults:
+  - default
+  - _self_
