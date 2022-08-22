@@ -133,13 +133,13 @@ class AgentDDPG:
         return actions
 
     def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
-        for idx, d in enumerate(dones):
+        for idx, info in enumerate(infos):
             s = slice(idx,idx+1)
             self.rb.add(
                 obs[s],
                 _obs[s],
                 actions[s],
-                rws[s].reshape(1,-1),
+                info[actor_key]["rewards"]["step"].sum().reshape(1,-1),
                 dones[s],
                 infos[s]
             )

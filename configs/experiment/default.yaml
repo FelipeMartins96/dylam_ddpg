@@ -4,7 +4,7 @@ torch_deterministic: False
 cuda: True
 track: False
 capture_video: False
-env_id: vssStrat-v0
+env_id: vssStrat1v1-v0
 num_envs: 10
 total_timesteps: 2e7
 
@@ -13,10 +13,14 @@ wandb:
   entity:
 
 agents:
-  Random:
+  random_b0:
     agent: RandomOU
     actors:
       - b_0
+  random_y0:
+    agent: RandomOU
+    actors:
+      - y_0
 
 defaults:
   - /agent@DDPG: DDPG
