@@ -1,0 +1,20 @@
+capture_video: True
+exp_name: pretrain_dylam
+
+agents:
+  random0:
+    agent: RandomOU
+    actors:
+      - b_0
+  random1:
+    agent: RandomOU
+    actors:
+      - b_1
+  Dylam:
+    agent: DylamDDPG
+    actors:
+      - y_0
+
+defaults:
+  - default
+  - _self_

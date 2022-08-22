@@ -45,6 +45,9 @@ class AgentRandomNormal:
     
     def update(self, global_step):
         return None
+    
+    def save_actor(self, path):
+        pass
 
 class AgentRandomOU:
     def __init__(
@@ -75,6 +78,9 @@ class AgentRandomOU:
     
     def update(self, global_step):
         return None
+    
+    def save_actor(self, path):
+        pass
 
 
 class AgentDDPG:
