@@ -54,7 +54,7 @@ class VSSStratEnv(VSSBaseEnv):
         info = {actor: {'rewards': {}} for actor in self.actors_keys}
         for idx, actor in enumerate(self.actors_keys):
             info[actor]['rewards']['ep'] = self.cumulative_reward[idx]
-            info[actor]['rewards']['step'] = strat_reward
+            info[actor]['rewards']['step'] = strat_reward[idx]
         info['extra'] = {
             'goal_blue': 1 if strat_reward[0][3] > 0 else 0,
             'goal_yellow': 1 if strat_reward[0][3] < 0 else 0,
