@@ -1,9 +1,11 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ddpg/#ddpg_continuous_actionpy
 from collections import namedtuple
 from copy import deepcopy
+import os
 import random
 import time
 from distutils.util import strtobool
+import hydra
 
 import gym
 import numpy as np
@@ -86,6 +88,8 @@ def runner(cfg):
                 instance=instantiate(cfg[value.agent], envs=envs, device=device)
             )
         )
+        if 'net' in value.keys():
+            agents[-1].instance.load_actor(os.path.join(hydra.utils.get_original_cwd(), value.net))
 
     start_time = time.time()
     

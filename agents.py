@@ -49,6 +49,9 @@ class AgentRandomNormal:
     def save_actor(self, path):
         pass
 
+    def load_actor(self, path):
+        pass
+
 class AgentRandomOU:
     def __init__(
             self, 
@@ -82,6 +85,8 @@ class AgentRandomOU:
     def save_actor(self, path):
         pass
 
+    def load_actor(self, path):
+        pass
 
 class AgentDDPG:
     def __init__(
@@ -139,6 +144,8 @@ class AgentDDPG:
         return actions
 
     def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
+        if self.rb.buffer_size == 0:
+            return
         for idx, info in enumerate(infos):
             s = slice(idx,idx+1)
             self.rb.add(
@@ -197,6 +204,9 @@ class AgentDDPG:
 
     def save_actor(self, path):
         torch.save(self.actor.state_dict(), path)
+    
+    def load_actor(self, path):
+        self.actor.load_state_dict(torch.load(path))
 
 class AgentDylamDDPG:
     def __init__(
@@ -266,6 +276,8 @@ class AgentDylamDDPG:
         return actions
 
     def observe(self, obs, _obs, actions, rws, dones, infos, actor_key):
+        if self.rb.buffer_size == 0:
+            return
         for idx, info in enumerate(infos):
             if "episode" in info.keys():
                 self.last_epi_rewards.add(info[actor_key]["rewards"]["ep"])
@@ -340,3 +352,6 @@ class AgentDylamDDPG:
 
     def save_actor(self, path):
         torch.save(self.actor.state_dict(), path)
+    
+    def load_actor(self, path):
+        self.actor.load_state_dict(torch.load(path))
