@@ -262,8 +262,8 @@ class VSSStratEnv(VSSBaseEnv):
     def __ball_grad(self):
         assert self.last_frame is not None
 
-        left_goal_pos = np.array([self.field.length / 2, 0])
-        right_goal_pos = np.array([-self.field.length / 2, 0])
+        left_goal_pos = np.array([-self.field.length / 2, 0])
+        right_goal_pos = np.array([self.field.length / 2, 0])
 
         # Calculate previous ball dist
         last_ball = self.last_frame.ball
