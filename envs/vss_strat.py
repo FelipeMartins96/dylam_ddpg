@@ -33,7 +33,7 @@ class VSSStratEnv(VSSBaseEnv):
         self.previous_ball_potential = None
         self.cumulative_reward = np.tile(np.array([0.0, 0.0, 0.0, 0.0]), (self.num_actors, 1))
         self.v_wheel_deadzone = 0.05
-        self.move_scale = 120 / 0.66
+        self.move_scale = (120 / 0.66) / 40
         self.grad_scale = 0.75 / 0.32
         self.energy_scale = 40000 / 0.0053
         self.goal_scale = 1 / 0.008
@@ -168,16 +168,18 @@ class VSSStratEnv(VSSBaseEnv):
 
             if c == 'b':
                 robot = self.frame.robots_blue[idx]
+                last_robot = self.last_frame.robots_blue[idx]
                 rewards[i] = np.array([
-                    self.__move_reward(robot),
+                    self.__move_reward(robot, last_robot),
                     ball_grad_reward,
                     self.__energy_penalty(i),
                     goal_reward,
                 ])
             if c == 'y':
                 robot = self.frame.robots_yellow[idx]
+                last_robot = self.last_frame.robots_yellow[idx]
                 rewards[i] = np.array([
-                    self.__move_reward(robot),
+                    self.__move_reward(robot, last_robot),
                     -ball_grad_reward,
                     self.__energy_penalty(i),
                     -goal_reward,
@@ -276,7 +278,7 @@ class VSSStratEnv(VSSBaseEnv):
 
         return ball_dist_rw
 
-    def __move_reward(self, robot):
+    def __move_reward(self, robot, last_robot):
         """Calculate Move to ball reward
 
         Cosine between the robot vel vector and the vector robot -> ball.
@@ -285,13 +287,13 @@ class VSSStratEnv(VSSBaseEnv):
 
         ball = np.array([self.frame.ball.x, self.frame.ball.y])
         robot_pos = np.array([robot.x, robot.y])
-        robot_vel = np.array(
-            [robot.v_x, robot.v_y]
-        )
-        robot_ball = ball - robot_pos
-        robot_ball = robot_ball / np.linalg.norm(robot_ball)
+        last_robot_pos = np.array([last_robot.x, last_robot.y])
+        
+        last_ball_dist = np.linalg.norm(ball - last_robot_pos)
+        ball_dist = np.linalg.norm(ball - robot_pos)
 
-        move_reward = np.dot(robot_ball, robot_vel)
+        move_reward = last_ball_dist - ball_dist
+
         return move_reward / self.move_scale
 
     def __energy_penalty(self, id):
