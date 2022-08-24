@@ -112,6 +112,7 @@ def runner(cfg):
                 for actor_key in env_actors_keys:
                     ep_rws = info[actor_key]['rewards']['ep']
                     [writer.add_scalar(f'actor_{actor_key}/rw_{n}/episodic_return', ep_rws[i], envs_step) for i, n in enumerate(envs.metadata['rewards_names'])]
+                    writer.add_scalar(f'actor_{actor_key}/rw_sum/episodic_return', ep_rws.sum(), envs_step)
                 break
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
