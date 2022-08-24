@@ -1,0 +1,22 @@
+capture_video: True
+exp_name: ddpg_1v1_blue
+num_envs: 10 # same number of obs as the actor gets twice as many obs per step
+total_timesteps: 10e6
+env_id: vssStrat1v1-v0
+
+agents:
+  DDPG:
+    agent: DDPG
+    actors:
+      - b_0
+  random0:
+    agent: RandomOU
+    actors:
+      - y_0
+
+DDPG:
+  batch_size: 256
+
+defaults:
+  - default
+  - _self_

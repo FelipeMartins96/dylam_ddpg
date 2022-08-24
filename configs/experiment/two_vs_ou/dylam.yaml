@@ -1,6 +1,7 @@
 capture_video: True
 exp_name: dylam_2v1_random
 num_envs: 5 # same number of obs as the actor gets twice as many obs per step
+total_timesteps: 25e6
 
 agents:
   Dylam:
