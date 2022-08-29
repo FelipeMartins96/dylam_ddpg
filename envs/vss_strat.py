@@ -288,10 +288,11 @@ class VSSStratEnv(VSSBaseEnv):
         """
 
         ball = np.array([self.frame.ball.x, self.frame.ball.y])
+        last_ball = np.array([self.last_frame.ball.x, self.last_frame.ball.y])
         robot_pos = np.array([robot.x, robot.y])
         last_robot_pos = np.array([last_robot.x, last_robot.y])
         
-        last_ball_dist = np.linalg.norm(ball - last_robot_pos)
+        last_ball_dist = np.linalg.norm(last_ball - last_robot_pos)
         ball_dist = np.linalg.norm(ball - robot_pos)
 
         move_reward = last_ball_dist - ball_dist
