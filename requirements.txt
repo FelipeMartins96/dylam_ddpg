@@ -60,3 +60,7 @@ wandb==0.12.11
 werkzeug==2.0.3 ; python_version >= "3.6"
 yaspin==2.1.0 ; python_full_version >= "3.6.2" and python_full_version < "4.0.0"
 zipp==3.7.0 ; python_version < "3.8" and python_version >= "3.7"
+tqdm==4.64.0 ;
+rc-robosim==1.2 ;
+PyVirtualDisplay==3.0 ;
+hydra-core==1.2.0 ;
