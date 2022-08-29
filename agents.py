@@ -133,6 +133,9 @@ class AgentDDPG:
         self.tau = tau
         self.policy_frequency = int(policy_frequency)
 
+        self.rws_scale = envs.metadata['r_scale']
+        self.rws_weights = envs.metadata['r_weights']
+
     def sample_actions(self, obs):
         with torch.no_grad():
             if self.rb.size() != 0 and self.rb.size() < self.learning_starts:
@@ -148,11 +151,12 @@ class AgentDDPG:
             return
         for idx, info in enumerate(infos):
             s = slice(idx,idx+1)
+            step_rws = info[actor_key]["rewards"]["step"] * self.rws_weights
             self.rb.add(
                 obs[s],
                 _obs[s],
                 actions[s],
-                info[actor_key]["rewards"]["step"].sum().reshape(1,-1),
+                (step_rws.sum()*self.rws_scale).reshape(1,-1),
                 dones[s],
                 infos[s]
             )
@@ -178,10 +182,10 @@ class AgentDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['losses/qf1_loss'] = qf1_loss.item()
+        info['losses/q_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
-        info[f'rw_total/qf1_a_value'] = qf1_a_values_mean[0].item()
+        info[f'q_value/rw_total'] = qf1_a_values_mean[0].item()
 
         if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
@@ -265,6 +269,9 @@ class AgentDylamDDPG:
         self.rw_names = envs.metadata['rewards_names']
         self.last_rew_mean = None
 
+        self.rws_scale = envs.metadata['r_scale']
+        self.rws_weights = envs.metadata['r_weights']
+
     def sample_actions(self, obs):
         with torch.no_grad():
             if self.rb.size() != 0 and self.rb.size() < self.learning_starts:
@@ -282,11 +289,12 @@ class AgentDylamDDPG:
             if "episode" in info.keys():
                 self.last_epi_rewards.add(info[actor_key]["rewards"]["ep"])
             s = slice(idx,idx+1)
+            step_rws = info[actor_key]["rewards"]["step"] * self.rws_scale
             self.rb.add(
                 obs[s],
                 _obs[s],
                 actions[s],
-                info[actor_key]["rewards"]["step"].reshape(1,-1),
+                step_rws.reshape(1,-1),
                 dones[s],
                 infos[s]
             )
@@ -324,12 +332,12 @@ class AgentDylamDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['losses/qf1_loss'] = qf1_loss.item()
+        info['losses/q_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
         for idx, n in enumerate(self.rw_names):
-            info[f'rw_{n}/qf1_a_value'] = qf1_a_values_mean[idx].item()
-            info[f'rw_{n}/lambda'] = lambdas[idx].item()
+            info[f'q_value/{n}'] = qf1_a_values_mean[idx].item()
+            info[f'lambda/{n}'] = lambdas[idx].item()
 
         if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))

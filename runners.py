@@ -135,7 +135,7 @@ def runner(cfg):
 
             if update_info is not None and global_step % 100 == 0:
                 for k, i in update_info.items():
-                    writer.add_scalar(f'{agent.name}/{k}', i, envs_step)
+                    writer.add_scalar(k, i, envs_step)
 
         writer.add_scalar("charts/SPS", int(envs_step / (time.time() - start_time)), envs_step)
         # TRY NOT TO MODIFY: CRUCIAL step easy to overlook

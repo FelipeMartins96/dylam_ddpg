@@ -11,8 +11,10 @@ from rsoccer_gym.vss.vss_gym_base import VSSBaseEnv
 
 class VSSStratEnv(VSSBaseEnv):
     VSSBaseEnv.metadata['num_rewards'] = 4
-    VSSBaseEnv.metadata['r_min'] = np.array([0.0*0.66, 0.0*0.32, -2.0*0.0053, 0.0*0.008])
-    VSSBaseEnv.metadata['r_max'] = np.array([0.5*0.66, 1.0*0.32, -1.0*0.0053, 1.0*0.008])
+    VSSBaseEnv.metadata['r_min'] = np.array([-1.0, -1.0,  0.0, -1.0])
+    VSSBaseEnv.metadata['r_max'] = np.array([ 1.0,  1.0, -1.0,  1.0])
+    VSSBaseEnv.metadata['r_weights'] = np.array([0.6065, 0.0574, 0.1765, 0.1596])
+    VSSBaseEnv.metadata['r_scale'] = 62.66
     VSSBaseEnv.metadata['rewards_names'] = ['move', 'ball_grad', 'energy', 'goal']
     VSSBaseEnv.metadata["video.frames_per_second"] = 40
 
@@ -33,10 +35,10 @@ class VSSStratEnv(VSSBaseEnv):
         self.previous_ball_potential = None
         self.cumulative_reward = np.tile(np.array([0.0, 0.0, 0.0, 0.0]), (self.num_actors, 1))
         self.v_wheel_deadzone = 0.05
-        self.move_scale = (120 / 0.66) / 40
-        self.grad_scale = 0.75 / 0.32
-        self.energy_scale = 40000 / 0.0053
-        self.goal_scale = 1 / 0.008
+        self.move_scale = 1.9
+        self.grad_scale = 1.5
+        self.energy_scale = 55292
+        self.goal_scale = 1
 
         print("dylam_ddpg/envs/vss_strat Environment initialized")
 
