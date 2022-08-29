@@ -1,5 +1,5 @@
 _target_: agents.AgentDylamDDPG
-batch_size: 64
+batch_size: 256
 buffer_size: 1e6
 dynamic: True
 exploration_noise: 0.2
@@ -7,7 +7,7 @@ gamma: 0.95
 learning_rate_q: 2e-4 
 learning_rate_actor: 1e-4
 learning_starts: 1e5
-n_last_ep_rewards: 10
+n_last_ep_rewards: 50
 policy_frequency: 1
 rew_tau: 0.005
 tau: 0.005

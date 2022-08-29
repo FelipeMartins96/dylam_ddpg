@@ -178,10 +178,10 @@ class AgentDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['losses/qf1_loss'] = qf1_loss.item()
+        info['losses/q_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
-        info[f'rw_total/qf1_a_value'] = qf1_a_values_mean[0].item()
+        info[f'q_value/rw_total'] = qf1_a_values_mean[0].item()
 
         if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
@@ -324,12 +324,12 @@ class AgentDylamDDPG:
         qf1_loss.backward()
         self.q_optimizer.step()
 
-        info['losses/qf1_loss'] = qf1_loss.item()
+        info['losses/q_loss'] = qf1_loss.item()
         with torch.no_grad():
             qf1_a_values_mean = qf1_a_values.mean(0)
         for idx, n in enumerate(self.rw_names):
-            info[f'rw_{n}/qf1_a_value'] = qf1_a_values_mean[idx].item()
-            info[f'rw_{n}/lambda'] = lambdas[idx].item()
+            info[f'q_value/{n}'] = qf1_a_values_mean[idx].item()
+            info[f'lambda/{n}'] = lambdas[idx].item()
 
         if global_step % self.policy_frequency == 0:
             qf1s = self.qf1(data.observations, self.actor(data.observations))
