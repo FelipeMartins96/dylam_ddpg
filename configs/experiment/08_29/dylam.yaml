@@ -1,7 +1,7 @@
 capture_video: True
-exp_name: dylam_1v2_pretrain_normalized
+exp_name: dylam_1v2_pretrain
 num_envs: 10
-total_timesteps: 5e7
+total_timesteps: 2e7
 env_id: vssStrat1v2-v1
 
 agents:

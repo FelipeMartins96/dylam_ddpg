@@ -33,7 +33,7 @@ class VSSStratEnv(VSSBaseEnv):
         self.previous_ball_potential = None
         self.cumulative_reward = np.tile(np.array([0.0, 0.0, 0.0, 0.0]), (self.num_actors, 1))
         self.v_wheel_deadzone = 0.05
-        self.move_scale = (120 / 0.66) / 40
+        self.move_scale = (120 / 0.66) / 160
         self.grad_scale = 0.75 / 0.32
         self.energy_scale = 40000 / 0.0053
         self.goal_scale = 1 / 0.008
