@@ -112,7 +112,7 @@ class VSSStratEnv(VSSBaseEnv):
             if c == 'b':
                 team_idxs = list(range(self.n_robots_blue))
                 team_idxs.pop(idx)
-                team_obs = np.stack([blue_np[[idx]], blue_np[team_idxs]]) if len(team_idxs) else blue_np
+                team_obs = np.concatenate([blue_np[[idx]], blue_np[team_idxs]], axis=0) if len(team_idxs) else blue_np
                 obs[actor] = np.concatenate(
                     [
                         ball_np,
@@ -123,7 +123,7 @@ class VSSStratEnv(VSSBaseEnv):
             if c == 'y':
                 team_idxs = list(range(self.n_robots_yellow))
                 team_idxs.pop(idx)
-                team_obs = np.stack([yellow_np[[idx]], yellow_np[team_idxs]]) if len(team_idxs) else yellow_np
+                team_obs = np.concatenate([yellow_np[[idx]], yellow_np[team_idxs]], axis=0) if len(team_idxs) else yellow_np
                 obs[actor] = np.concatenate(
                     [
                         -ball_np,
