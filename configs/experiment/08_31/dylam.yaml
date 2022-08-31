@@ -1,0 +1,23 @@
+capture_video: True
+exp_name: dylam_1v2_pretrain_normalized
+num_envs: 10
+total_timesteps: 25e6
+env_id: vssStrat1v2-v1
+
+agents:
+  Dylam:
+    agent: DylamDDPG
+    actors:
+      - b_0
+  random0:
+    agent: RandomOU
+    actors:
+      - y_0
+  random1:
+    agent: RandomOU
+    actors:
+      - y_1
+
+defaults:
+  - default
+  - _self_

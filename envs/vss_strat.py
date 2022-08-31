@@ -11,8 +11,8 @@ from rsoccer_gym.vss.vss_gym_base import VSSBaseEnv
 
 class VSSStratEnv(VSSBaseEnv):
     VSSBaseEnv.metadata['num_rewards'] = 4
-    VSSBaseEnv.metadata['r_min'] = np.array([-1.0, -1.0,  0.0, -1.0])
-    VSSBaseEnv.metadata['r_max'] = np.array([ 1.0,  1.0, -1.0,  1.0])
+    VSSBaseEnv.metadata['r_min'] = np.array([-1.0, -1.0, -0.25, -1.0])
+    VSSBaseEnv.metadata['r_max'] = np.array([ 0.3,  0.6, -1.00,  1.2])
     VSSBaseEnv.metadata['r_weights'] = np.array([0.6065, 0.0574, 0.1765, 0.1596])
     VSSBaseEnv.metadata['r_scale'] = 62.66
     VSSBaseEnv.metadata['rewards_names'] = ['move', 'ball_grad', 'energy', 'goal']
