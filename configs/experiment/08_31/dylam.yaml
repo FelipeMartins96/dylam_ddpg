@@ -1,5 +1,5 @@
 capture_video: True
-exp_name: dylam_1v2_pretrain_normalized
+exp_name: dylam_1v2_pretrain_normalized_newRange
 num_envs: 10
 total_timesteps: 25e6
 env_id: vssStrat1v2-v1
