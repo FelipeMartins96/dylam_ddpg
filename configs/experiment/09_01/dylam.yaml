@@ -1,0 +1,29 @@
+capture_video: True
+exp_name: dylam_2v1_pretrainedDylam
+num_envs: 5 # same number of obs as the actor gets twice as many obs per step
+total_timesteps: 25e6
+env_id: vssStrat2v1-v1
+
+agents:
+  Dylam:
+    agent: DylamDDPG
+    actors:
+      - b_0
+      - b_1
+  DylamPretrained:
+    agent: DylamDDPGpretrained
+    actors:
+      - y_0
+    net: model_Dylam.pt
+
+DylamDDPG:
+  batch_size: 256
+
+DylamDDPGpretrained:
+  buffer_size: 0
+  exploration_noise: 0
+
+defaults:
+  - default
+  - /agent@DylamDDPGpretrained: DylamDDPG
+  - _self_
